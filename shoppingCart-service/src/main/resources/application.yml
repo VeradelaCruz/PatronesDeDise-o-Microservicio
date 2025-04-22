@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: shoppingCart-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/shoppingcart_db
+    username: root
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8082
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
