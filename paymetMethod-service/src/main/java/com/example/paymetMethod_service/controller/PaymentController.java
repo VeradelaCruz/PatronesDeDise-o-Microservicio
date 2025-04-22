@@ -40,6 +40,17 @@ public class PaymentController {
         }
     }
 
+    @GetMapping("/getPaymentByCartId/{cartId}")
+    private ResponseEntity<?> getPaymentByCartId(@PathVariable Long cartId){
+        try {
+            Payment foundedPaymentCart= paymentService.findPaymentByCartId(cartId);
+            return ResponseEntity.ok(foundedPaymentCart);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Cart not found");
+        }
+    }
+
+
     @PostMapping("/payCart")
     public ResponseEntity<?> payCartShopping(@RequestBody @Valid PaymentRequest paymentRequest){
         try {

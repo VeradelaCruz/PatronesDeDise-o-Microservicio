@@ -40,6 +40,12 @@ public class PaymentService {
                 .orElseThrow(()-> new RuntimeException("Payment not found"));
     }
 
+    //Get payment by card id:
+    public  Payment findPaymentByCartId(Long cartId){
+        return paymentRepository.findPaymentByCartId(cartId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for this cart"));
+    }
+
     //Create payment
     public Payment payCart(CartDTO cartDTO, PaymentMethod paymentMethod) {
         CartDTO cart = paymentMethodClient.getCartById(cartDTO.getCartId());

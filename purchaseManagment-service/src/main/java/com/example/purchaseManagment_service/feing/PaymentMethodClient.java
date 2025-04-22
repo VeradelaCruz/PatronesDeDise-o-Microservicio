@@ -17,6 +17,6 @@ public interface PaymentMethodClient {
     @PostMapping("/payment/payCart")
     PaymentDTO payCart(@RequestBody PaymentDTO paymentDTO);
 
-
-
+    @GetMapping("/payment/getPaymentByCartId/{cartId}")
+    PaymentDTO getPaymentByCartId(@PathVariable Long cartId);
 }

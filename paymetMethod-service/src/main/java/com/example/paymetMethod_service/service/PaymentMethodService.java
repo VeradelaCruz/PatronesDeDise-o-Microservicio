@@ -1,15 +1,15 @@
 package com.example.paymetMethod_service.service;
-
-import com.example.paymetMethod_service.models.Payment;
 import com.example.paymetMethod_service.models.PaymentMethod;
 import com.example.paymetMethod_service.repository.PaymentMethodRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PaymentMethodService {
+
     @Autowired
     public PaymentMethodRepository paymentMethodRepository;
 
@@ -25,8 +25,16 @@ public class PaymentMethodService {
     }
     //Add payment method
     public List<PaymentMethod> createPayment(List<PaymentMethod> payments){
-        return paymentMethodRepository.saveAll(payments);
+        List<PaymentMethod> newPayments = new ArrayList<>();
+        for (PaymentMethod paymentMethod : payments) {
+            if (paymentMethodRepository.existsByMethodNameAndProvider(paymentMethod.getMethodName(), paymentMethod.getProvider())) {
+                throw new RuntimeException("Payment method already exists with method name: " + paymentMethod.getMethodName() + " and provider: " + paymentMethod.getProvider());
+            }
+            newPayments.add(paymentMethodRepository.save(paymentMethod));
+        }
+        return newPayments;
     }
+
 
 
 

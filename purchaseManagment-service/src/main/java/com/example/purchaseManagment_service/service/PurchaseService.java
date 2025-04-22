@@ -28,7 +28,7 @@ public class PurchaseService {
         CartDTO cartAmount= cartClient.getCartById(paymentDTO.getCartDTO().getCartId());
 
         //Traer la compra del carrito:
-        PaymentDTO paymentDTO1 = paymentMethodClient.payCart(paymentDTO);
+        PaymentDTO paymentDTO1 = paymentMethodClient.getPaymentByCartId(paymentDTO.getCartDTO().getCartId());
 
         //Asignar los valores  a los atributos de la clase Purchase:
         Purchase payment = new Purchase();
