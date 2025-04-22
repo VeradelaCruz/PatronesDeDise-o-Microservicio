@@ -144,6 +144,7 @@ This microservice handles everything related to payments and available payment m
 ### Payment: Represents a payment transaction, including details like the selected payment method, the amount, and the associated purchase.
 - GET   http://localhost:8083/payment/getAllPayments - Get a list of all paid carts.
 - GET  http://localhost:8083/payment/getPaymentById/{paymentId} - Get a cart payment by id.
+- GET http://localhost:8083/payment/getPaymentByCartId/{cartId} - Get a cart payment by cart id.
 - POST  http://localhost:8083/payment/payCart - Pay a cart and add it to data base.
 ```bash
 {
