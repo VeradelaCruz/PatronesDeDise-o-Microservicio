@@ -7,6 +7,9 @@ import com.example.paymetMethod_service.models.Payment;
 import com.example.paymetMethod_service.models.PaymentMethod;
 import com.example.paymetMethod_service.repository.PaymentMethodRepository;
 import com.example.paymetMethod_service.repository.PaymentRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class PaymentService {
@@ -47,7 +51,11 @@ public class PaymentService {
     }
 
     //Create payment
-    public Payment payCart(CartDTO cartDTO, PaymentMethod paymentMethod) {
+    @CircuitBreaker(name = "shoppingCart-service", fallbackMethod = "fallbackCreatePayment")
+    @Retry(name = "shoppingCart-service")
+    @TimeLimiter(name = "shoppingCart-service")
+    public CompletableFuture<Payment>  payCart(CartDTO cartDTO, PaymentMethod paymentMethod) {
+        return CompletableFuture.supplyAsync(()->{
         CartDTO cart = paymentMethodClient.getCartById(cartDTO.getCartId());
 
         Payment payment= new Payment();
@@ -79,7 +87,21 @@ public class PaymentService {
         payment.setPaymentDate(LocalDateTime.now());
 
         return paymentRepository.save(payment);
+        });
+    }
 
+    //Metodo fallback
+    public CompletableFuture<Payment> fallbackCreatePayment(CartDTO cartDTO, PaymentMethod paymentMethod, Throwable throwable){
+        Payment payment= new Payment();
+        payment.setPaymentState(PaymentState.FAILED);
+        payment.setCartId(cartDTO.getCartId());
+        payment.setTotalAmount(0.0);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setPaymentDate(LocalDateTime.now());
+
+        System.out.println("Error en la creación de pago: " + throwable.getMessage());
+
+        return CompletableFuture.completedFuture(payment);
     }
 
 }

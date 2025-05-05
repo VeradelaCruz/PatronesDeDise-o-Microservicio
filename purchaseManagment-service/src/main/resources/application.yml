@@ -18,3 +18,42 @@ spring:
 
 server:
   port: 8084
+
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      purchaseManagment-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+  retry:
+    instances:
+      purchaseManagment-service:
+        maxAttempts: 3
+        waitDuration: 2s
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - feign.FeignException$InternalServerError
+
+  timelimiter:
+    instances:
+      purchaseManagment-service:
+        timeoutDuration: 4s
+        cancelRunningFuture: true
+cancelRunningFuture: true
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    circuitbreakers:
+      enabled: true

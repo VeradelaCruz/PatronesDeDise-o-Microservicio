@@ -7,11 +7,15 @@ import com.example.shoppingCart_service.models.Cart;
 import com.example.shoppingCart_service.models.CartItem;
 import com.example.shoppingCart_service.models.ProductClient;
 import com.example.shoppingCart_service.repository.CartRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class CartService {
@@ -39,44 +43,56 @@ public class CartService {
     }
 
     //create cart with dto
+    @CircuitBreaker(name = "catalog-service", fallbackMethod = "fallbackCreateCart")
+    @Retry(name = "catalog-service")
+    @TimeLimiter(name = "catalog-service")
+    public CompletableFuture<Object> createCart(CartDTO cartDTO) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<CartItem> validatedItems = new ArrayList<>();
+            Double totalPrice = 0.0;
 
-    public Cart createCart(CartDTO cartDTO){
-        List<CartItem> validatedItems = new ArrayList<>();
-        Double totalPrice = 0.0;
+            for (CartItemDTO item : cartDTO.getItems()) {
+                ProductsDTO productDTO = productClient.getProductById(item.getProductId());
 
-        for (CartItemDTO item : cartDTO.getItems()) {
-            ProductsDTO productDTO = productClient.getProductById(item.getProductId());
+                if (item.getQuantity() > productDTO.getStock()) {
+                    throw new RuntimeException("The product " + productDTO.getNameProduct() + " has not enough stock");
+                }
 
-            if (item.getQuantity() > productDTO.getStock()) {
-                throw new RuntimeException("The product " + productDTO.getNameProduct() + " has not enough stock");
+                // Reducir el stock
+                productDTO.setStock(productDTO.getStock() - item.getQuantity());
+                productClient.updateProduct(productDTO.getProductId(), productDTO);
+
+                CartItem cartItem = new CartItem();
+                cartItem.setProductId(productDTO.getProductId());
+                cartItem.setNameProduct(productDTO.getNameProduct());
+                cartItem.setPrice(productDTO.getPrice());
+                cartItem.setCategory(productDTO.getCategory());
+                cartItem.setQuantity(item.getQuantity());
+
+                validatedItems.add(cartItem);
+
+                totalPrice += productDTO.getPrice() * item.getQuantity();
             }
 
-            // Reducir el stock
-            productDTO.setStock(productDTO.getStock() - item.getQuantity());
-            productClient.updateProduct(productDTO.getProductId(), productDTO);
+            Cart cart = new Cart();
+            cart.setItems(validatedItems);
+            cart.setTotalPrice(totalPrice);
 
-
-            CartItem cartItem = new CartItem();
-            cartItem.setProductId(productDTO.getProductId());
-            cartItem.setNameProduct(productDTO.getNameProduct());
-            cartItem.setPrice(productDTO.getPrice());
-            cartItem.setCategory(productDTO.getCategory());
-            cartItem.setQuantity(item.getQuantity());
-
-
-
-            validatedItems.add(cartItem);
-
-            totalPrice += productDTO.getPrice() * item.getQuantity();
-        }
-
-        Cart cart = new Cart();
-        cart.setItems(validatedItems);
-        cart.setTotalPrice(totalPrice);
-
-        return cartRepository.save(cart);
+            return cartRepository.save(cart);
+        });
     }
 
-
-
+    public CompletableFuture<Object> fallbackCreateCart(CartDTO cartDTO, Throwable throwable) {
+        ProductsDTO fallbackProduct = new ProductsDTO();
+        fallbackProduct.setProductId(-1L);
+        fallbackProduct.setNameProduct("Not available");
+        fallbackProduct.setStock(0);
+        fallbackProduct.setPrice(0.0);
+        fallbackProduct.setQuantity(0);
+        fallbackProduct.setCategory("None");
+        return CompletableFuture.completedFuture(fallbackProduct);
+    }
 }
+
+
+

@@ -7,9 +7,14 @@ import com.example.purchaseManagment_service.feing.CartClient;
 import com.example.purchaseManagment_service.feing.PaymentMethodClient;
 import com.example.purchaseManagment_service.models.Purchase;
 import com.example.purchaseManagment_service.repository.PurchaseRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class PurchaseService {
@@ -22,8 +27,13 @@ public class PurchaseService {
     @Autowired
     public PaymentMethodClient paymentMethodClient;
 
+
+    @CircuitBreaker(name = "purchaseManagment-service", fallbackMethod = "fallbackRegisterPayment")
+    @Retry(name = "purchaseManagment-service")
+    @TimeLimiter(name = "purchaseManagment-service")
     //Registramos la compra del carrito:
-    public Purchase registerPayment(@RequestBody PaymentDTO paymentDTO){
+    public CompletableFuture<Purchase> registerPayment(@RequestBody PaymentDTO paymentDTO){
+        return CompletableFuture.supplyAsync(()->{
         //Traer todos los datos del carrito:
         CartDTO cartAmount= cartClient.getCartById(paymentDTO.getCartDTO().getCartId());
 
@@ -37,7 +47,19 @@ public class PurchaseService {
         payment.setTotalAmount(cartAmount.getTotalPrice());
 
         return purchaseRepository.save(payment);
+        });
+    }
 
+    //Metodo fallback
+    public CompletableFuture<Purchase> fallbackRegisterPayment(PaymentDTO paymentDTO,Throwable throwable){
+        Purchase payment = new Purchase();
+        payment.setPaymentMethod("UNKNOWN");
+        payment.setPaymentState(State.FAILED);
+        payment.setTotalAmount(0.0);
+
+        System.out.print("Error system "+ throwable.getMessage());
+
+        return CompletableFuture.completedFuture(payment);
     }
 
 }

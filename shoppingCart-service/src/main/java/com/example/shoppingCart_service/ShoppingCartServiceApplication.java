@@ -8,6 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.example.shoppingCart_service.models")
+
 public class ShoppingCartServiceApplication {
 
 	public static void main(String[] args) {

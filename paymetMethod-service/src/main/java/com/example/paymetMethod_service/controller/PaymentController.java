@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/payment")
@@ -52,13 +54,18 @@ public class PaymentController {
 
 
     @PostMapping("/payCart")
-    public ResponseEntity<?> payCartShopping(@RequestBody @Valid PaymentRequest paymentRequest){
-        try {
-           Payment payment= paymentService.payCart(paymentRequest.getCartDTO(), paymentRequest.getPaymentMethod());
-            return ResponseEntity.ok(payment);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+    public CompletableFuture<ResponseEntity<?>> payCartShopping(@RequestBody @Valid PaymentRequest paymentRequest) {
+        return paymentService.payCart(paymentRequest.getCartDTO(), paymentRequest.getPaymentMethod())
+                .<ResponseEntity<?>>thenApply(payment -> ResponseEntity.status(HttpStatus.CREATED).body(payment))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause();
+                    if (cause instanceof RuntimeException) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(cause.getMessage());
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("An error occurred: " + cause.getMessage());
+                    }
+                });
     }
 }
 

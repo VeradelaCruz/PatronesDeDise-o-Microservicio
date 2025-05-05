@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/catalog")
@@ -24,12 +25,8 @@ public class ProductsController {
     //Get product by id:
     @GetMapping("/getById/{productId}")
     public ResponseEntity<?> getProductById(@PathVariable Long productId){
-        try {
-            Products product= productsService.showProductById(productId);
-            return ResponseEntity.ok(product);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found.");
-        }
+        Products product = productsService.showProductById(productId); // lanza excepción si no lo encuentra para probar que circuit breaker funciona
+        return ResponseEntity.ok(product);
     }
 
     @PostMapping("/addProduct")

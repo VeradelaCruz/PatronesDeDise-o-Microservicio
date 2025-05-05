@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.concurrent.CompletableFuture;
+
 @RestController
 @RequestMapping("/purchase")
 public class PurchaseController {
@@ -18,14 +20,19 @@ public class PurchaseController {
 
 
     @PostMapping("/paidPurchases")
-    public ResponseEntity<?> paidPurchases(@RequestBody PaymentDTO paymentDTO){
-        try {
-            purchaseService.registerPayment(paymentDTO);
-            return ResponseEntity.ok(paymentDTO);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
-
+    public CompletableFuture<ResponseEntity<?>> paidPurchases(@RequestBody PaymentDTO paymentDTO){
+        return purchaseService.registerPayment(paymentDTO)
+                .<ResponseEntity<?>>thenApply(payment -> ResponseEntity.status(HttpStatus.CREATED).body(payment))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause();
+                    if (cause instanceof RuntimeException) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(cause.getMessage());
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("An error occurred: " + cause.getMessage());
+                    }
+                });
     }
+
 
 }

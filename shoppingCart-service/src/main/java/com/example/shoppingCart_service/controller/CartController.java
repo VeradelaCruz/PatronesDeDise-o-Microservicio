@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/cart")
@@ -42,18 +44,20 @@ public class CartController {
     }
 
     @PostMapping("/createCart")
-    public ResponseEntity<?> createCart(@RequestBody CartDTO cartDTO) {
-        try {
-            // Llamamos al servicio que gestiona la lógica de creación de carrito
-            Cart cart = cartService.createCart(cartDTO);
-            // Retornamos una respuesta exitosa con el carrito creado
-            return ResponseEntity.status(HttpStatus.CREATED).body(cart);
-        } catch (RuntimeException e) {
-            // En caso de que no haya suficiente stock o algún otro error, lo capturamos y lo respondemos
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            // Para otros errores generales
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred: " + e.getMessage());
-        }
+    public CompletableFuture<ResponseEntity<Object>> createCart(@RequestBody CartDTO cartDTO) {
+        return cartService.createCart(cartDTO)
+                .thenApply(cart -> ResponseEntity.status(HttpStatus.CREATED).body(cart))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause();
+                    if (cause instanceof RuntimeException) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(cause.getMessage());
+                    } else {
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("An error occurred: " + cause.getMessage());
+                    }
+                });
     }
+
+
+
 }
