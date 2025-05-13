@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: config-server
+server:
+  port: 8085
+
+cloud:
+  config:
+    server:
+      git:
+        uri: https://github.com/VeradelaCruz/PatronesDeDise-o-Microservicio
+        searchPaths: config-data
+        username: ${GIT_USER}
+        password: ${GIT_PASSWORD}
